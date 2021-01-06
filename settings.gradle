@@ -1,0 +1,6 @@
+include ':ux'
+include ':sceneform'
+include ':app'
+project(':sceneform').projectDir = new File(rootDir, 'sceneform-sdk/sceneform-android-sdk/sceneformsrc/sceneform/')
+project(':ux').projectDir = new File(rootDir, 'sceneform-sdk/sceneform-android-sdk/sceneformux/ux/')
+rootProject.name = "Service Assistant"

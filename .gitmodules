@@ -1,0 +1,3 @@
+[submodule "sceneform-sdk/sceneform-android-sdk"]
+	path = sceneform-sdk/sceneform-android-sdk
+	url = https://github.com/Immersiv/sceneform-android-sdk
