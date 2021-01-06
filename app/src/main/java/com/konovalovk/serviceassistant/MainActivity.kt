@@ -12,7 +12,7 @@ class MainActivity : AppCompatActivity() {
 
         supportFragmentManager
             .beginTransaction()
-            .replace(R.id.flMain, ArFragment())
+            .replace(R.id.flMain, TestFragment())
             .commit()
     }
 }
