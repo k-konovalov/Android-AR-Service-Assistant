@@ -22,7 +22,7 @@ class TestFragment: Fragment(R.layout.fragment_test) {
         super.onStart()
         val ports = mutableListOf<Port>()
         for(x in 1..24){
-            ports.add(Port(x.toString(), Random.nextInt(0,2) == 0))
+            ports.add(Port(x.toString(), Random.nextInt(0,2) == 0, Client()))
         }
         rvAdapter.ports = ports
     }

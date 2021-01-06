@@ -1,14 +1,12 @@
 package com.konovalovk.serviceassistant
 
-import android.content.Context
-import android.hardware.camera2.CameraManager
 import android.media.Image
 import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Toast
-import androidx.core.content.ContextCompat.getSystemService
+import androidx.lifecycle.Observer
 import com.google.ar.core.Config
 import com.google.ar.core.HitResult
 import com.google.ar.core.Plane
@@ -37,9 +35,14 @@ class ArFragment: BaseArFragment() {
             } catch (e: java.lang.Exception){
                 return@addOnUpdateListener
             }
-            viewModel.findBarcode(image, this, requireContext())
+            viewModel.findBarcode(image, this, requireContext(), planeDiscoveryController)
 
         }
+        viewModel.rvAdapter.portClicked.observe(viewLifecycleOwner,
+                Observer {
+                    viewModel.initDetailView(it ?: return@Observer, requireContext())
+                }
+        )
     }
 
 

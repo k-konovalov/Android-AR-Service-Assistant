@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.lifecycle.MutableLiveData
 import androidx.recyclerview.widget.RecyclerView
 
 class RecyclerAdapter : RecyclerView.Adapter<ActorViewHolder>() {
@@ -16,6 +17,7 @@ class RecyclerAdapter : RecyclerView.Adapter<ActorViewHolder>() {
             field = value
             notifyDataSetChanged()
         }
+    val portClicked = MutableLiveData<Port>()
 
     override fun getItemCount(): Int = ports.size
     fun getItem(position: Int) : Port = ports[position]
@@ -26,7 +28,12 @@ class RecyclerAdapter : RecyclerView.Adapter<ActorViewHolder>() {
     }
 
     override fun onBindViewHolder(holder: ActorViewHolder, position: Int) {
-        holder.bind(getItem(position))
+        getItem(position).run {
+            holder.bind(this)
+            holder.itemView.setOnClickListener {
+                portClicked.postValue(if (client != null) this else null)
+            }
+        }
     }
 }
 
@@ -40,6 +47,5 @@ class ActorViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         id.text = port.number
         body.setImageResource(if (port.isEnabled) R.drawable.ic_info else R.drawable.ic_close)
         body.setColorFilter(if (port.isEnabled) Color.parseColor("#26ED70") else Color.parseColor("#AC4848"))
-
     }
 }
