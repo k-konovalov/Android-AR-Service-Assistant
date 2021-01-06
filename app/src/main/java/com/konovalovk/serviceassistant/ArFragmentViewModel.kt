@@ -13,6 +13,8 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import androidx.lifecycle.ViewModel
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.ar.core.*
 import com.google.ar.sceneform.AnchorNode
 import com.google.ar.sceneform.math.Quaternion
@@ -23,6 +25,7 @@ import com.google.mlkit.vision.barcode.Barcode
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
+import kotlin.random.Random
 
 class ArFragmentViewModel: ViewModel() {
     val TAG = "ArFragmentViewModel"
@@ -34,9 +37,46 @@ class ArFragmentViewModel: ViewModel() {
         .build()
     val scanner = BarcodeScanning.getClient(options)
 
-    fun initRenderable(context: Context) {
+    val rvAdapter = RecyclerAdapter()
 
-        initArrow(context)
+    fun initRenderable(context: Context) {
+        initArUI(context)
+        //initArrow(context)
+    }
+
+    private fun initArUI(context: Context) {
+        val arrowViewSize = 200
+        val mainUI = RecyclerView(context).apply {
+            layoutManager = GridLayoutManager(context, 2, GridLayoutManager.HORIZONTAL, false)
+            adapter = rvAdapter
+        }
+
+        val ports = mutableListOf<Port>()
+        for(x in 1..24){
+            ports.add(Port(x.toString(), Random.nextInt(0,2) == 0))
+        }
+        rvAdapter.ports = ports
+
+        ViewRenderable
+                .builder()
+                .setView(context, mainUI)
+                .build()
+                .thenAccept { renderable ->
+                    viewRenderable = renderable
+                    viewRenderable?.apply {
+                        isShadowCaster = false
+                        isShadowReceiver = false
+                    }
+                }
+                .exceptionally {
+                    AlertDialog.Builder(context).run {
+                        setMessage(it.message)
+                        setTitle("Error")
+                        create()
+                        show()
+                    }
+                    return@exceptionally null
+                }
     }
 
     private fun initArrow(context: Context) {
