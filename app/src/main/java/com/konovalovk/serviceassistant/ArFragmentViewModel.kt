@@ -230,14 +230,14 @@ class ArFragmentViewModel: ViewModel() {
 
     fun createArImageDB(session: Session?, assets: AssetManager) =
             AugmentedImageDatabase(session).apply {
-                val bitmap = try { assets.open("laptop.jpg").use { inputStream -> BitmapFactory.decodeStream(inputStream) } }
-                catch (e: IOException) {
-                    Log.e(TAG, "I/O exception loading augmented image bitmap.", e)
-                    return@apply
-                }
-                bitmap?.run {
-                    val index = addImage("book", this, 0.1f)//10cm
-                }
+                addImage("book", loadBitmap(assets, "book.jpg"), 0.05f)//10cm
+            }
+
+    private fun loadBitmap(assets: AssetManager, filename: String) =
+            try { assets.open(filename).use { inputStream -> BitmapFactory.decodeStream(inputStream) } }
+            catch (e: IOException) {
+                Log.e(TAG, "I/O exception loading augmented image bitmap.", e)
+                null
             }
 
     fun checkArImage(frame: Frame?){
