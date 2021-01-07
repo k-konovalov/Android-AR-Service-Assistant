@@ -218,7 +218,7 @@ class ArFragmentViewModel: ViewModel() {
         localRotation = finalTransform*/
     }
 
-    fun findBarcode(image: Image, arFragment: ArFragment, context: Context, planeDiscoveryController: PlaneDiscoveryController) {
+    fun findBarcode(image: Image, arFragment: ArFragment, planeDiscoveryController: PlaneDiscoveryController) {
         hitAnchor?.run { return }
         val inputImage = InputImage.fromByteBuffer(
             image.planes[0].buffer,
@@ -235,7 +235,7 @@ class ArFragmentViewModel: ViewModel() {
                         Log.d(TAG, "Barcodes: ${it.rawValue}")
                     }
                     val dispayMetrics = DisplayMetrics()
-                    context.display?.getRealMetrics(dispayMetrics)
+                    arFragment.context?.display?.getRealMetrics(dispayMetrics)
                     val centerPoint = PointF(dispayMetrics.widthPixels / 2f, dispayMetrics.heightPixels / 2f)
                     arFragment.arSceneView?.arFrame?.hitTestInstantPlacement(centerPoint.x, centerPoint.y, 2f)?.run {
                         if (isNotEmpty()) {
