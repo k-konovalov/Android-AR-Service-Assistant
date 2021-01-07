@@ -4,10 +4,7 @@ import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
 import androidx.lifecycle.Observer
-import com.google.ar.core.Config
-import com.google.ar.core.HitResult
-import com.google.ar.core.Plane
-import com.google.ar.core.Session
+import com.google.ar.core.*
 import com.google.ar.core.exceptions.*
 import com.google.ar.sceneform.Scene
 import com.google.ar.sceneform.ux.ArFragment
@@ -18,18 +15,21 @@ class ArFragment: ArFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel.initRenderable(requireContext())
+        viewModel.initAr(this)
         initListeners()
     }
 
     private fun initListeners() {
-        val onUpdateListener = Scene.OnUpdateListener { viewModel.findBarcode(this@ArFragment, planeDiscoveryController) }
+        val onUpdateListener = Scene.OnUpdateListener {
+            viewModel.findBarcode(this@ArFragment, planeDiscoveryController)
+            viewModel.checkArImage(arSceneView?.arFrame)
+        }
 
         arSceneView?.scene?.addOnUpdateListener(onUpdateListener)
 
         setOnTapArPlaneListener { hitResult: HitResult, _: Plane?, motionEvent: MotionEvent? ->
             if (motionEvent?.action == MotionEvent.ACTION_UP)
-                viewModel.onPlaneTap(hitResult, this)
+                viewModel.onPlaneTap(hitResult.createAnchor())
         }
 
         //arSceneView?.scene?.removeOnUpdateListener()
@@ -40,12 +40,9 @@ class ArFragment: ArFragment() {
         )
     }
 
-    override fun getSessionConfiguration(session: Session?): Config {
-        // Set the Instant Placement mode.
-        val config = Config(session)
-        config.instantPlacementMode = Config.InstantPlacementMode.LOCAL_Y_UP
-        config.focusMode = Config.FocusMode.AUTO
-
-        return config
+    override fun getSessionConfiguration(session: Session?) = Config(session).apply {
+        instantPlacementMode = Config.InstantPlacementMode.LOCAL_Y_UP // Set the Instant Placement mode.
+        focusMode = Config.FocusMode.AUTO
+        augmentedImageDatabase = viewModel.createArImageDB(session, requireActivity().assets)
     }
 }

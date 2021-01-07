@@ -2,6 +2,8 @@ package com.konovalovk.serviceassistant
 
 import android.app.AlertDialog
 import android.content.Context
+import android.content.res.AssetManager
+import android.graphics.BitmapFactory
 import android.graphics.PointF
 import android.media.Image
 import android.util.DisplayMetrics
@@ -17,6 +19,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.ar.core.*
 import com.google.ar.sceneform.AnchorNode
+import com.google.ar.sceneform.Scene
 import com.google.ar.sceneform.math.Vector3
 import com.google.ar.sceneform.rendering.ViewRenderable
 import com.google.ar.sceneform.ux.PlaneDiscoveryController
@@ -26,7 +29,9 @@ import com.google.mlkit.vision.barcode.Barcode
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
+import java.io.IOException
 import kotlin.random.Random
+
 
 class ArFragmentViewModel: ViewModel() {
     private val TAG = "ArFragmentViewModel"
@@ -36,6 +41,7 @@ class ArFragmentViewModel: ViewModel() {
     private var mainUINode: TransformableNode? = null
     private var detailsNode: TransformableNode? = null
     private var transformationSystem: TransformationSystem? = null
+    private var scene: Scene? = null
     private var mainUIRenderable: ViewRenderable? = null
     private var detailsRenderable: ViewRenderable? = null
 
@@ -46,7 +52,13 @@ class ArFragmentViewModel: ViewModel() {
 
     val rvAdapter = RecyclerAdapter()
 
-    fun initRenderable(context: Context) {
+    fun initAr(arFragment: ArFragment){
+        transformationSystem = transformationSystem ?: arFragment.transformationSystem
+        scene = arFragment.arSceneView?.scene
+        initRenderable(arFragment.requireContext())
+    }
+
+    private fun initRenderable(context: Context) {
         initArUI(context)
     }
 
@@ -115,7 +127,8 @@ class ArFragmentViewModel: ViewModel() {
                     return@exceptionally null
                 }
 
-        detailsNode = initTransformableNode(transformationSystem ?: return, detailsRenderable ?: return).apply {
+        detailsNode = initTransformableNode(transformationSystem ?: return, detailsRenderable
+                ?: return).apply {
             localPosition = mainUINode?.localPosition?.let { Vector3(it.x, it.y, it.z + 0.1f) } //z + 10cm
             scaleController.minScale = 0.2f
             scaleController.maxScale = 0.5f
@@ -159,7 +172,7 @@ class ArFragmentViewModel: ViewModel() {
         val inputImage = InputImage.fromByteBuffer(image.planes[0].buffer, image.width, image.height, Surface.ROTATION_0, InputImage.IMAGE_FORMAT_NV21)
         scanner.process(inputImage)
             .addOnSuccessListener { processBarcodes(it, arFragment, planeDiscoveryController) }
-            .addOnFailureListener { Log.e(TAG,"Error during find Barcode on frame", it) }
+            .addOnFailureListener { Log.e(TAG, "Error during find Barcode on frame", it) }
 
         image.close()
     }
@@ -180,7 +193,7 @@ class ArFragmentViewModel: ViewModel() {
         val centerPoint = PointF(dispayMetrics.widthPixels / 2f, dispayMetrics.heightPixels / 2f)
         arFragment.arSceneView?.arFrame?.hitTestInstantPlacement(centerPoint.x, centerPoint.y, 2f)?.run {
             if (isNotEmpty()) {
-                onPlaneTap(get(0), arFragment)
+                onPlaneTap(get(0).createAnchor())
                 planeDiscoveryController.hide()
                 //Disable Instant Placement mode
                 //arFragment.arSceneView.session?.configure(Config(arFragment.arSceneView.session).apply { instantPlacementMode = Config.InstantPlacementMode.DISABLED })
@@ -189,13 +202,13 @@ class ArFragmentViewModel: ViewModel() {
         }
     }
 
-    fun onPlaneTap(hitResult: HitResult, arFragment: ArFragment) {
-        hitAnchor = hitAnchor?.apply { return } ?: hitResult.createAnchor()
-        transformationSystem = transformationSystem ?: arFragment.transformationSystem
-        mainUINode = initTransformableNode(transformationSystem ?: return, mainUIRenderable ?: return)
+    fun onPlaneTap(anchor: Anchor) {
+        hitAnchor = hitAnchor?.run { return } ?: anchor
+        mainUINode = initTransformableNode(transformationSystem ?: return, mainUIRenderable
+                ?: return)
 
         parentNode = AnchorNode(hitAnchor).apply {
-            setParent(arFragment.arSceneView?.scene)
+            setParent(scene)
             addChild(mainUINode)
         }
     }
@@ -215,4 +228,30 @@ class ArFragmentViewModel: ViewModel() {
         localRotation = finalTransform*/
     }
 
+    fun createArImageDB(session: Session?, assets: AssetManager) =
+            AugmentedImageDatabase(session).apply {
+                val bitmap = try { assets.open("laptop.jpg").use { inputStream -> BitmapFactory.decodeStream(inputStream) } }
+                catch (e: IOException) {
+                    Log.e(TAG, "I/O exception loading augmented image bitmap.", e)
+                    return@apply
+                }
+                bitmap?.run {
+                    val index = addImage("book", this, 0.1f)//10cm
+                }
+            }
+
+    fun checkArImage(frame: Frame?){
+        val updatedAugmentedImages: Collection<AugmentedImage> = frame?.getUpdatedTrackables(AugmentedImage::class.java) ?: return
+        updatedAugmentedImages.run {
+            if (isNotEmpty())
+                forEach { image ->
+                    if (image.trackingState == TrackingState.TRACKING) {
+                        if (image.name == "book") {
+                            val anchor = image.createAnchor(image.centerPose)
+                            onPlaneTap(anchor)
+                        }
+                    }
+                }
+        }
+    }
 }
