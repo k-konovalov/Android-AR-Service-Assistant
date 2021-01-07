@@ -1,23 +1,24 @@
 package com.konovalovk.serviceassistant
 
-import android.content.Context
-import android.hardware.camera2.CameraManager
 import android.media.Image
 import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Toast
-import androidx.core.content.ContextCompat.getSystemService
+import androidx.lifecycle.Observer
 import com.google.ar.core.Config
 import com.google.ar.core.HitResult
 import com.google.ar.core.Plane
 import com.google.ar.core.Session
 import com.google.ar.core.exceptions.*
+import com.google.ar.sceneform.FrameTime
+import com.google.ar.sceneform.Scene
+import com.google.ar.sceneform.ux.ArFragment
 import com.google.ar.sceneform.ux.BaseArFragment
 
 
-class ArFragment: BaseArFragment() {
+class ArFragment: ArFragment() {
     private val viewModel = ArFragmentViewModel()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -27,40 +28,28 @@ class ArFragment: BaseArFragment() {
     }
 
     private fun initListeners() {
-        this.setOnTapArPlaneListener { hitResult: HitResult, _: Plane?, _: MotionEvent? ->
-            viewModel.onTap(hitResult, this)
-        }
-
-        arSceneView?.scene?.addOnUpdateListener {
-            val image: Image = try {
-                arSceneView?.arFrame?.acquireCameraImage() ?: return@addOnUpdateListener
-            } catch (e: java.lang.Exception){
-                return@addOnUpdateListener
+        val onUpdateListener = object : Scene.OnUpdateListener {
+            override fun onUpdate(frameTime: FrameTime?) {
+                val image: Image = try {
+                    arSceneView?.arFrame?.acquireCameraImage() ?: return
+                } catch (e: java.lang.Exception) { return }
+                viewModel.findBarcode(image, this@ArFragment, planeDiscoveryController)
             }
-            viewModel.findBarcode(image, this, requireContext())
-
         }
-    }
 
+        arSceneView?.scene?.addOnUpdateListener(onUpdateListener)
 
-    override fun isArRequired(): Boolean {
-        return true
-    }
-
-    override fun getAdditionalPermissions(): Array<String> {
-        return arrayOf()
-    }
-
-    override fun handleSessionException(sessionException: UnavailableException?) {
-        val message = when (sessionException) {
-            is UnavailableArcoreNotInstalledException -> "Please install ARCore"
-            is UnavailableApkTooOldException -> "Please update ARCore"
-            is UnavailableSdkTooOldException -> "Please update this app"
-            is UnavailableDeviceNotCompatibleException -> "This device does not support AR"
-            else -> "Failed to create AR session"
+        setOnTapArPlaneListener { hitResult: HitResult, _: Plane?, motionEvent: MotionEvent? ->
+            if (motionEvent?.action == MotionEvent.ACTION_UP)
+                viewModel.onTap(hitResult, this)
         }
-        Log.e("ArFragment", "Error: $message", sessionException)
-        Toast.makeText(requireActivity(), message, Toast.LENGTH_LONG).show()
+
+        //arSceneView?.scene?.removeOnUpdateListener()
+        viewModel.rvAdapter.portClicked.observe(viewLifecycleOwner,
+                Observer {
+                    viewModel.initDetailView(it ?: return@Observer, requireContext())
+                }
+        )
     }
 
     override fun getSessionConfiguration(session: Session?): Config {
@@ -70,9 +59,5 @@ class ArFragment: BaseArFragment() {
         config.focusMode = Config.FocusMode.AUTO
 
         return config
-    }
-
-    override fun getSessionFeatures(): MutableSet<Session.Feature> {
-        return mutableSetOf()
     }
 }
