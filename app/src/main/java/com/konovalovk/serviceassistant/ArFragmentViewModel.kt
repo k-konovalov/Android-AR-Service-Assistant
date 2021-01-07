@@ -33,11 +33,11 @@ class ArFragmentViewModel: ViewModel() {
 
     private var hitAnchor: Anchor? = null
     private var parentNode = AnchorNode()
-    var mainUINode: TransformableNode? = null
-    var detailsNode: TransformableNode? = null
-    var transformationSystem: TransformationSystem? = null
-    var mainUIRenderable: ViewRenderable? = null
-    var detailsRenderable: ViewRenderable? = null
+    private var mainUINode: TransformableNode? = null
+    private var detailsNode: TransformableNode? = null
+    private var transformationSystem: TransformationSystem? = null
+    private var mainUIRenderable: ViewRenderable? = null
+    private var detailsRenderable: ViewRenderable? = null
 
     private val options = BarcodeScannerOptions.Builder()
         .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
@@ -73,7 +73,7 @@ class ArFragmentViewModel: ViewModel() {
                 }
     }
 
-    fun initMainUI(context: Context) = RecyclerView(context).apply {
+    private fun initMainUI(context: Context) = RecyclerView(context).apply {
         layoutManager = GridLayoutManager(context, 2, GridLayoutManager.HORIZONTAL, false)
         adapter = rvAdapter
         shuffleRVwithFakeData()
@@ -159,7 +159,7 @@ class ArFragmentViewModel: ViewModel() {
         val inputImage = InputImage.fromByteBuffer(image.planes[0].buffer, image.width, image.height, Surface.ROTATION_0, InputImage.IMAGE_FORMAT_NV21)
         scanner.process(inputImage)
             .addOnSuccessListener { processBarcodes(it, arFragment, planeDiscoveryController) }
-            .addOnFailureListener { Log.e(TAG,"Error during process frame", it) }
+            .addOnFailureListener { Log.e(TAG,"Error during find Barcode on frame", it) }
 
         image.close()
     }
